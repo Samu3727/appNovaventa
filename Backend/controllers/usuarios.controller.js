@@ -65,16 +65,16 @@ const getUsuarioPorId = async (req, res) => {
 
 const crearUsuario = async (req, res) => {
     try {
-        const {nombres, apellidos} = req.body;
+        const {nombres, apellidos, telefono} = req.body;
 
-        const sql = 'INSERT INTO Usuarios (nombres, apellidos) VALUES (?, ?)';
-        const values = [nombres, apellidos];
+        const sql = 'INSERT INTO Usuarios (nombres, apellidos, telefono) VALUES (?, ?, ?)';
+        const values = [nombres, apellidos, telefono || null];
 
         const [result] = await db.query(sql, values);
 
-        console.log('Usuario creado con exito', {id: result.insertId, nombres, apellidos});
+        console.log('Usuario creado con exito', {id: result.insertId, nombres, apellidos, telefono});
 
-        res.status(201).json({id: result.insertId, nombres, apellidos});
+        res.status(201).json({id: result.insertId, nombres, apellidos, telefono});
     } catch (error) {
         res.status(500).json({error: error.message});
     }
@@ -85,12 +85,12 @@ const crearUsuario = async (req, res) => {
 const actualizarUsuario = async (req, res) => {
     const id = req.params.id;
     const {
-        nombres, apellidos
+        nombres, apellidos, telefono
     } = req.body;
 
-    const sql = 'UPDATE Usuarios SET nombres = ?, apellidos = ? WHERE id = ?';
+    const sql = 'UPDATE Usuarios SET nombres = ?, apellidos = ?, telefono = ? WHERE id = ?';
 
-    const values = [nombres, apellidos, id];
+    const values = [nombres, apellidos, telefono || null, id];
 
     try {
         await db.query(sql, values);

@@ -9,7 +9,7 @@ export default function ListarUsuarios() {
     const [searchQuery, setSearchQuery] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [editMode, setEditMode] = useState(false);
-    const [currentUsuario, setCurrentUsuario] = useState({ id: null, nombres: '', apellidos: '', correo: '', contrasena: '' });
+    const [currentUsuario, setCurrentUsuario] = useState({ id: null, nombres: '', apellidos: '', correo: '', telefono: '', contrasena: '' });
     const { token } = useContext(AuthContext);
 
     const API_BASE = API_BASE_URL;
@@ -34,7 +34,7 @@ export default function ListarUsuarios() {
 
     const handleCreate = () => {
         setEditMode(false);
-        setCurrentUsuario({ id: null, nombres: '', apellidos: '', correo: '', contrasena: '' });
+        setCurrentUsuario({ id: null, nombres: '', apellidos: '', correo: '', telefono: '', contrasena: '' });
         setModalVisible(true);
     };
 
@@ -57,7 +57,7 @@ export default function ListarUsuarios() {
             const method = editMode ? 'PUT' : 'POST';
             
             const body = editMode 
-                ? { nombres: currentUsuario.nombres, apellidos: currentUsuario.apellidos }
+                ? { nombres: currentUsuario.nombres, apellidos: currentUsuario.apellidos, telefono: currentUsuario.telefono }
                 : currentUsuario;
 
             const resp = await fetch(url, {
@@ -111,6 +111,7 @@ export default function ListarUsuarios() {
                 <View>
                     <Text style={styles.name}>{item.nombres} {item.apellidos}</Text>
                     {item.correo && <Text style={styles.email}>{item.correo}</Text>}
+                    {item.telefono && <Text style={styles.phone}>📞 {item.telefono}</Text>}
                 </View>
                 <View style={styles.actions}>
                     <TouchableOpacity onPress={() => handleEdit(item)} style={styles.editButton}>
@@ -183,30 +184,16 @@ export default function ListarUsuarios() {
                                 placeholderTextColor="#9CA3AF"
                             />
 
-                            {!editMode && (
-                                <>
-                                    <Text style={styles.label}>Correo</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={currentUsuario.correo}
-                                        onChangeText={(t) => setCurrentUsuario({ ...currentUsuario, correo: t })}
-                                        placeholder="correo@ejemplo.com"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        placeholderTextColor="#9CA3AF"
-                                    />
+                            <Text style={styles.label}>Teléfono</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={currentUsuario.telefono}
+                                onChangeText={(t) => setCurrentUsuario({ ...currentUsuario, telefono: t })}
+                                placeholder="Teléfono"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="phone-pad"
+                            />
 
-                                    <Text style={styles.label}>Contraseña</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={currentUsuario.contrasena}
-                                        onChangeText={(t) => setCurrentUsuario({ ...currentUsuario, contrasena: t })}
-                                        placeholder="Contraseña"
-                                        secureTextEntry
-                                        placeholderTextColor="#9CA3AF"
-                                    />
-                                </>
-                            )}
 
                             <View style={styles.modalActions}>
                                 <TouchableOpacity 
@@ -289,6 +276,11 @@ const styles = StyleSheet.create({
     email: {
         color: '#6B7280',
         fontSize: 14
+    },
+    phone: {
+        color: '#6B7280',
+        fontSize: 14,
+        marginTop: 2
     },
     actions: {
         flexDirection: 'row',
