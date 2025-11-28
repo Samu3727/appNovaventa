@@ -34,13 +34,13 @@ const crearVenta = async (req, res) => {
 const listarVentas = async (req, res) => {
     try {
         const { usuario_id } = req.query;
-        let query = 'SELECT * FROM Ventas WHERE estado = 1';
+        let query = 'SELECT v.*, u.nombres, u.apellidos FROM Ventas v LEFT JOIN Usuarios u ON v.usuario_id = u.id WHERE v.estado = 1';
         const params = [];
         if (usuario_id) {
-            query += ' AND usuario_id = ?';
+            query += ' AND v.usuario_id = ?';
             params.push(usuario_id);
         }
-        query += ' ORDER BY fecha DESC';
+        query += ' ORDER BY v.fecha DESC';
 
         const [rows] = await db.query(query, params);
         res.json(rows);
@@ -54,7 +54,7 @@ const listarVentas = async (req, res) => {
 const getVentaPorId = async (req, res) => {
     try {
         const { id } = req.params;
-        const [ventas] = await db.query('SELECT * FROM Ventas WHERE id = ?', [id]);
+        const [ventas] = await db.query('SELECT v.*, u.nombres, u.apellidos FROM Ventas v LEFT JOIN Usuarios u ON v.usuario_id = u.id WHERE v.id = ?', [id]);
         if (!ventas || ventas.length === 0) return res.status(404).json({ message: 'Venta no encontrada' });
         const venta = ventas[0];
 

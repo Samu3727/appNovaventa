@@ -177,6 +177,7 @@ export default function VentasTab() {
   const renderVenta = ({ item }) => {
     const fecha = new Date(item.fecha);
     const fechaFormato = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const nombreCompleto = `${item.nombres || ''} ${item.apellidos || ''}`.trim() || 'Usuario desconocido';
     
     return (
       <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.id)}>
@@ -185,7 +186,7 @@ export default function VentasTab() {
           <Text style={styles.ventaTotal}>${item.total}</Text>
         </View>
         <Text style={styles.ventaFecha}>{fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
-        <Text style={styles.ventaUsuario}>Usuario ID: {item.usuario_id}</Text>
+        <Text style={styles.ventaUsuario}>{nombreCompleto}</Text>
       </TouchableOpacity>
     );
   };
@@ -332,8 +333,10 @@ export default function VentasTab() {
                   </View>
 
                   <View style={styles.detalleCard}>
-                    <Text style={styles.detalleLabel}>Usuario ID:</Text>
-                    <Text style={styles.detalleValue}>{ventaDetalle.venta?.usuario_id}</Text>
+                    <Text style={styles.detalleLabel}>Cliente:</Text>
+                    <Text style={styles.detalleValue}>
+                      {`${ventaDetalle.venta?.nombres || ''} ${ventaDetalle.venta?.apellidos || ''}`.trim() || 'Usuario desconocido'}
+                    </Text>
                   </View>
 
                   <View style={styles.detalleCard}>
