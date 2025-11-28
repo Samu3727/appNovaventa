@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import { API_BASE_URL } from '../config/api';
 
 const AuthContext = createContext({
   user: null,
@@ -36,18 +37,26 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (correo, contrasena) => {
     try {
-      const resp = await fetch('http://10.0.2.2:8000/api/auth/login', {
+      console.log('Intentando login con:', correo);
+      console.log('URL:', `${API_BASE_URL}/auth/login`);
+      
+      const resp = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ correo, contrasena })
       });
       
+      console.log('Respuesta status:', resp.status);
+      
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(err.message || 'Error en login');
+        console.error('Error del servidor:', err);
+        throw new Error(err.message || `Error ${resp.status}: No se pudo iniciar sesión`);
       }
       
       const data = await resp.json();
+      console.log('Login exitoso:', data.usuario);
+      
       setUser(data.usuario);
       setToken(data.token);
       
@@ -56,7 +65,14 @@ export const AuthProvider = ({ children }) => {
       
       return data;
     } catch (error) {
-      Alert.alert('Error', error.message || 'No se pudo iniciar sesión');
+      console.error('Error completo en signIn:', error);
+      
+      if (error.message.includes('Network request failed')) {
+        Alert.alert('Error de Conexión', 'No se puede conectar al servidor. Verifica que el backend esté corriendo en puerto 8000');
+      } else {
+        Alert.alert('Error', error.message || 'No se pudo iniciar sesión');
+      }
+      
       throw error;
     }
   };

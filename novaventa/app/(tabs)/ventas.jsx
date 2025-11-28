@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, Modal, Scrol
 import { useFocusEffect } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import AuthContext from '../../components/AuthContext';
+import { API_BASE_URL } from '../../config/api';
 
 export default function VentasTab() {
   const [ventas, setVentas] = useState([]);
@@ -13,7 +14,7 @@ export default function VentasTab() {
   const [carrito, setCarrito] = useState([]);
   const { token } = useContext(AuthContext);
 
-  const API_BASE = 'http://10.0.2.2:8000/api';
+  const API_BASE = API_BASE_URL;
 
   const fetchVentas = useCallback(async () => {
     try {

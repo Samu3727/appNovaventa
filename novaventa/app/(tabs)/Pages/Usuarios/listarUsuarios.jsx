@@ -2,6 +2,7 @@ import React, { useState, useCallback, useContext } from "react";
 import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, Alert, Modal, ScrollView } from "react-native";
 import { useFocusEffect } from "expo-router";
 import AuthContext from '../../../../components/AuthContext';
+import { API_BASE_URL } from '../../../../config/api';
 
 export default function ListarUsuarios() {
     const [usuarios, setUsuarios] = useState([]);
@@ -11,7 +12,7 @@ export default function ListarUsuarios() {
     const [currentUsuario, setCurrentUsuario] = useState({ id: null, nombres: '', apellidos: '', correo: '', contrasena: '' });
     const { token } = useContext(AuthContext);
 
-    const API_BASE = 'http://10.0.2.2:8000/api';
+    const API_BASE = API_BASE_URL;
 
     const fetchUsuarios = useCallback(async (q = '') => {
         try {
