@@ -1,15 +1,152 @@
-import React, { useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useContext, useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import AuthContext from '../../components/AuthContext';
 import { useRouter } from 'expo-router';
+import { API_BASE_URL } from '../../config/api';
 
 export default function Perfil() {
-  const { user, signOut } = useContext(AuthContext);
+  const { user, signOut, token } = useContext(AuthContext);
   const router = useRouter();
+  const [profileImage, setProfileImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadProfileImage = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload/profile-image`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.imageUrl) {
+          setProfileImage(`${API_BASE_URL}${data.imageUrl}`);
+        }
+      }
+    } catch (error) {
+      console.log('Error al cargar imagen:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user && token) {
+      loadProfileImage();
+    }
+  }, [user, token]);
+
+  const uploadImage = async (uri) => {
+    try {
+      setLoading(true);
+
+      // Crear FormData
+      const formData = new FormData();
+      const filename = uri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('image', {
+        uri,
+        name: filename,
+        type
+      });
+
+      const response = await fetch(`${API_BASE_URL}/upload/profile-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProfileImage(`${API_BASE_URL}${data.imageUrl}`);
+        Alert.alert('Éxito', 'Imagen actualizada correctamente');
+      } else {
+        const error = await response.json();
+        Alert.alert('Error', error.message || 'No se pudo subir la imagen');
+      }
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      Alert.alert('Error', 'No se pudo subir la imagen');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
     router.replace('/login');
+  };
+
+  const pickImage = async () => {
+    // Pedir permisos
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a tus fotos para cambiar tu imagen de perfil');
+      return;
+    }
+
+    // Abrir selector de imágenes
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+      uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    // Pedir permisos de cámara
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu cámara para tomar una foto');
+      return;
+    }
+
+    // Abrir cámara
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+      uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const showImageOptions = () => {
+    Alert.alert(
+      'Cambiar foto de perfil',
+      'Elige una opción',
+      [
+        {
+          text: 'Tomar foto',
+          onPress: takePhoto
+        },
+        {
+          text: 'Elegir de galería',
+          onPress: pickImage
+        },
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        }
+      ]
+    );
   };
 
   return (
@@ -19,11 +156,26 @@ export default function Perfil() {
           <>
             <View style={styles.card}>
               <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {user.nombres?.charAt(0)}{user.apellidos?.charAt(0)}
-                  </Text>
-                </View>
+                <TouchableOpacity onPress={showImageOptions} activeOpacity={0.8} disabled={loading}>
+                  {loading ? (
+                    <View style={styles.avatar}>
+                      <ActivityIndicator size="large" color="#fff" />
+                    </View>
+                  ) : profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>
+                        {user.nombres?.charAt(0)}{user.apellidos?.charAt(0)}
+                      </Text>
+                    </View>
+                  )}
+                  {!loading && (
+                    <View style={styles.cameraIconContainer}>
+                      <Text style={styles.cameraIcon}>📷</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               </View>
               
               <Text style={styles.name}>{user.nombres} {user.apellidos}</Text>
@@ -88,20 +240,49 @@ const styles = StyleSheet.create({
     elevation: 3
   },
   avatarContainer: {
-    marginBottom: 16
+    marginBottom: 16,
+    position: 'relative'
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center'
   },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#10B981'
+  },
   avatarText: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '700',
     color: '#fff'
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#8B5CF6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4
+  },
+  cameraIcon: {
+    fontSize: 18
   },
   name: { 
     fontSize: 24, 

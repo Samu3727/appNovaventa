@@ -46,12 +46,14 @@ const usuariosRoutes = require('./routes/usuarios');
 const productosRoutes = require('./routes/productos');
 const ventasRoutes = require('./routes/ventas');
 const utilidadesRoutes = require('./routes/utilidades');
+const uploadRoutes = require('./routes/upload');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/ventas', ventasRoutes);
 app.use('/api/utilidades', utilidadesRoutes);
+app.use('/api/upload', uploadRoutes);
 
 //Carpeta de imagenes.
 

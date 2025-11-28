@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, ScrollView } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import AuthContext from '../../components/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import CustomAlert from '../../components/CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 export default function VentasTab() {
   const [ventas, setVentas] = useState([]);
@@ -18,6 +20,7 @@ export default function VentasTab() {
   const [usuariosVentas, setUsuariosVentas] = useState([]);
   
   const { token } = useContext(AuthContext);
+  const { alert, alertConfig, hideAlert } = useAlert();
 
   const API_BASE = API_BASE_URL;
 
@@ -27,9 +30,55 @@ export default function VentasTab() {
         headers: { Authorization: `Bearer ${token}` } 
       });
       const data = await resp.json();
-      setVentas(data);
+      console.log('Ventas recibidas:', data);
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        console.log('No hay ventas');
+        setVentas([]);
+        return;
+      }
+      
+      // Agrupar ventas por fecha (mismo minuto = mismo pedido)
+      // Usar un margen de 2 minutos para agrupar ventas del mismo pedido
+      const grouped = {};
+      const sortedData = [...data].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      
+      sortedData.forEach(venta => {
+        const fecha = new Date(venta.fecha);
+        const timestamp = fecha.getTime();
+        
+        // Buscar si existe un grupo dentro de 2 minutos
+        let foundGroup = false;
+        for (let key in grouped) {
+          const groupTime = new Date(grouped[key].fecha).getTime();
+          if (Math.abs(timestamp - groupTime) <= 120000) { // 2 minutos en ms
+            grouped[key].ventas.push(venta);
+            grouped[key].totalGeneral += parseFloat(venta.total || 0);
+            foundGroup = true;
+            break;
+          }
+        }
+        
+        if (!foundGroup) {
+          const key = `${timestamp}`;
+          grouped[key] = {
+            fecha: venta.fecha,
+            ventas: [venta],
+            totalGeneral: parseFloat(venta.total || 0)
+          };
+        }
+      });
+      
+      // Convertir a array y ordenar por fecha descendente
+      const ventasAgrupadas = Object.values(grouped).sort((a, b) => 
+        new Date(b.fecha) - new Date(a.fecha)
+      );
+      
+      console.log('Ventas agrupadas:', ventasAgrupadas);
+      setVentas(ventasAgrupadas);
     } catch (error) {
-      console.error(error);
+      console.error('Error al cargar ventas:', error);
+      alert.error('Error', 'No se pudieron cargar las ventas');
     }
   }, [token]);
 
@@ -75,7 +124,7 @@ export default function VentasTab() {
   // Agregar un usuario al pedido
   const agregarUsuario = (usuario) => {
     if (usuariosVentas.find(u => u.usuario_id === usuario.id)) {
-      Alert.alert('Info', 'Este usuario ya está agregado');
+      alert.warning('Atención', 'Este usuario ya está agregado');
       return;
     }
     setUsuariosVentas([...usuariosVentas, {
@@ -158,20 +207,23 @@ export default function VentasTab() {
 
   const guardarVenta = async () => {
     if (usuariosVentas.length === 0) {
-      return Alert.alert('Error', 'Agregue al menos un usuario con productos');
+      return alert.error('Error', 'Agregue al menos un usuario con productos');
     }
 
     // Verificar que todos los usuarios tengan productos
     const sinProductos = usuariosVentas.filter(u => u.carrito.length === 0);
     if (sinProductos.length > 0) {
-      return Alert.alert('Error', 'Todos los usuarios deben tener al menos un producto');
+      return alert.error('Error', 'Todos los usuarios deben tener al menos un producto');
     }
 
     try {
+      console.log('Guardando ventas para usuarios:', usuariosVentas);
+      
       // Crear una venta por cada usuario
-      const promesas = usuariosVentas.map(usuario => {
-        const total = calcularTotalUsuario(usuario.carrito);
-        return fetch(`${API_BASE}/ventas`, {
+      const promesas = usuariosVentas.map(async usuario => {
+        console.log('Enviando venta:', { usuario_id: usuario.usuario_id, productos: usuario.carrito });
+        
+        const response = await fetch(`${API_BASE}/ventas`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -179,75 +231,100 @@ export default function VentasTab() {
           },
           body: JSON.stringify({
             usuario_id: usuario.usuario_id,
-            productos: usuario.carrito,
-            total: total
+            productos: usuario.carrito
           })
         });
+        
+        const responseData = await response.json();
+        console.log('Respuesta del servidor:', responseData);
+        
+        if (!response.ok) {
+          throw new Error(responseData.message || responseData.error || 'Error al crear venta');
+        }
+        
+        return responseData;
       });
 
-      await Promise.all(promesas);
+      const resultados = await Promise.all(promesas);
+      console.log('Ventas creadas:', resultados);
 
-      Alert.alert('Éxito', `Se registraron ${usuariosVentas.length} venta(s) correctamente`);
+      alert.success('Éxito', `Se registraron ${usuariosVentas.length} venta(s) correctamente`);
       setModalVisible(false);
-      fetchVentas();
+      setUsuariosVentas([]);
+      await fetchVentas();
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error('Error al guardar ventas:', error);
+      alert.error('Error', error.message);
     }
   };
 
-  const verDetalleVenta = async (ventaId) => {
+  const verDetalleVenta = async (ventasDelPedido, fechaPedido) => {
     try {
-      const resp = await fetch(`${API_BASE}/ventas/${ventaId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await resp.json();
-      setVentaDetalle(data);
+      // Obtener detalles de todas las ventas del pedido
+      const detallesPromises = ventasDelPedido.map(venta =>
+        fetch(`${API_BASE}/ventas/${venta.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json())
+      );
+      
+      const detalles = await Promise.all(detallesPromises);
+      
+      // Estructurar datos para el modal
+      const pedidoCompleto = {
+        fecha: fechaPedido,
+        ventasIds: ventasDelPedido.map(v => v.id),
+        usuarios: detalles.map(detalle => ({
+          nombres: detalle.venta.nombres,
+          apellidos: detalle.venta.apellidos,
+          productos: detalle.productos,
+          total: parseFloat(detalle.venta.total)
+        })),
+        totalGeneral: detalles.reduce((sum, d) => sum + parseFloat(d.venta.total), 0)
+      };
+      
+      setVentaDetalle(pedidoCompleto);
       setDetalleModalVisible(true);
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo cargar el detalle de la venta');
+    } catch (_error) {
+      alert.error('Error', 'No se pudo cargar el detalle del pedido');
     }
   };
 
-  const eliminarVenta = (ventaId) => {
-    Alert.alert(
-      'Confirmar',
-      '¿Está seguro de eliminar esta venta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
+  const eliminarVenta = (ventasDelPedido) => {
+    alert.confirmDestructive(
+      'Confirmar eliminación',
+      '¿Está seguro de eliminar este pedido completo?',
+      async () => {
             try {
-              await fetch(`${API_BASE}/ventas/${ventaId}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              Alert.alert('Éxito', 'Venta eliminada');
+              // Eliminar todas las ventas del pedido
+              await Promise.all(
+                ventasDelPedido.map(venta =>
+                  fetch(`${API_BASE}/ventas/${venta.id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                  })
+                )
+                );
+              alert.success('Éxito', 'Pedido eliminado');
               setDetalleModalVisible(false);
               fetchVentas();
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la venta');
+            } catch (_error) {
+              alert.error('Error', 'No se pudo eliminar el pedido');
             }
-          }
-        }
-      ]
+      }
     );
-  };
-
-  const renderVenta = ({ item }) => {
+  };  const renderVenta = ({ item }) => {
     const fecha = new Date(item.fecha);
     const fechaFormato = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const nombreCompleto = `${item.nombres || ''} ${item.apellidos || ''}`.trim() || 'Usuario desconocido';
+    const cantUsuarios = item.ventas.length;
     
     return (
-      <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.id)}>
+      <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.ventas, item.fecha)}>
         <View style={styles.ventaHeader}>
           <Text style={styles.ventaId}>Pedido {fechaFormato}</Text>
-          <Text style={styles.ventaTotal}>${item.total}</Text>
+          <Text style={styles.ventaTotal}>${item.totalGeneral.toFixed(2)}</Text>
         </View>
         <Text style={styles.ventaFecha}>{fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
-        <Text style={styles.ventaUsuario}>{nombreCompleto}</Text>
+        <Text style={styles.ventaUsuario}>{cantUsuarios} usuario{cantUsuarios > 1 ? 's' : ''}</Text>
       </TouchableOpacity>
     );
   };
@@ -262,7 +339,7 @@ export default function VentasTab() {
 
       <FlatList 
         data={ventas} 
-        keyExtractor={(i) => String(i.id)} 
+        keyExtractor={(item, index) => `pedido-${index}-${new Date(item.fecha).getTime()}`} 
         renderItem={renderVenta}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
@@ -425,56 +502,68 @@ export default function VentasTab() {
               {ventaDetalle && (
                 <>
                   <Text style={styles.modalTitle}>
-                    Pedido {new Date(ventaDetalle.venta?.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    Pedido {new Date(ventaDetalle.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </Text>
                   
                   <View style={styles.detalleCard}>
                     <Text style={styles.detalleLabel}>Fecha:</Text>
                     <Text style={styles.detalleValue}>
-                      {new Date(ventaDetalle.venta?.fecha).toLocaleString()}
+                      {new Date(ventaDetalle.fecha).toLocaleString()}
                     </Text>
                   </View>
 
                   <View style={styles.detalleCard}>
-                    <Text style={styles.detalleLabel}>Cliente:</Text>
+                    <Text style={styles.detalleLabel}>Usuarios:</Text>
                     <Text style={styles.detalleValue}>
-                      {`${ventaDetalle.venta?.nombres || ''} ${ventaDetalle.venta?.apellidos || ''}`.trim() || 'Usuario desconocido'}
+                      {ventaDetalle.usuarios?.length || 0}
                     </Text>
                   </View>
 
-                  <View style={styles.detalleCard}>
-                    <Text style={styles.detalleLabel}>Total:</Text>
-                    <Text style={[styles.detalleValue, styles.totalDetalle]}>
-                      ${ventaDetalle.venta?.total}
-                    </Text>
-                  </View>
+                  {/* Lista de usuarios con sus productos */}
+                  {ventaDetalle.usuarios?.map((usuario, indexUsuario) => (
+                    <View key={indexUsuario} style={styles.usuarioDetalleCard}>
+                      <View style={styles.usuarioDetalleHeader}>
+                        <Text style={styles.usuarioDetalleNombre}>
+                          {`${usuario.nombres} ${usuario.apellidos}`}
+                        </Text>
+                        <Text style={styles.usuarioDetalleTotal}>
+                          ${usuario.total.toFixed(2)}
+                        </Text>
+                      </View>
 
-                  <Text style={styles.label}>Productos ({ventaDetalle.productos?.length || 0})</Text>
-                  
-                  {ventaDetalle.productos?.map((producto, index) => (
-                    <View key={index} style={styles.productoDetalleItem}>
-                      <View style={styles.productoDetalleInfo}>
-                        <Text style={styles.productoDetalleNombre}>{producto.nombre_producto}</Text>
-                        <Text style={styles.productoDetalleCodigo}>Código: {producto.codigo_producto}</Text>
-                      </View>
-                      <View style={styles.productoDetalleRight}>
-                        <Text style={styles.productoDetalleCantidad}>x{producto.cantidad}</Text>
-                        <Text style={styles.productoDetallePrecio}>
-                          ${producto.precio_unitario}
-                        </Text>
-                        <Text style={styles.productoDetalleSubtotal}>
-                          ${(producto.cantidad * producto.precio_unitario).toFixed(2)}
-                        </Text>
-                      </View>
+                      {usuario.productos?.map((producto, indexProducto) => (
+                        <View key={indexProducto} style={styles.productoDetalleItem}>
+                          <View style={styles.productoDetalleInfo}>
+                            <Text style={styles.productoDetalleNombre}>{producto.nombre_producto}</Text>
+                            <Text style={styles.productoDetalleCodigo}>Código: {producto.codigo_producto}</Text>
+                          </View>
+                          <View style={styles.productoDetalleRight}>
+                            <Text style={styles.productoDetalleCantidad}>x{producto.cantidad}</Text>
+                            <Text style={styles.productoDetallePrecio}>
+                              ${producto.precio_unitario}
+                            </Text>
+                            <Text style={styles.productoDetalleSubtotal}>
+                              ${(producto.cantidad * producto.precio_unitario).toFixed(2)}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
                     </View>
                   ))}
+
+                  <View style={styles.totalGeneralCard}>
+                    <Text style={styles.totalGeneralLabel}>Total General:</Text>
+                    <Text style={styles.totalGeneralValue}>
+                      ${ventaDetalle.totalGeneral?.toFixed(2)}
+                    </Text>
+                  </View>
                 </>
               )}
 
               <View style={styles.modalActions}>
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.deleteButton]} 
-                  onPress={() => eliminarVenta(ventaDetalle?.venta?.id)}
+                  onPress={() => eliminarVenta(ventaDetalle?.ventasIds?.map(id => ({ id })) || [])}
                 >
                   <Text style={styles.deleteButtonText}>🗑️ Eliminar</Text>
                 </TouchableOpacity>
@@ -489,6 +578,15 @@ export default function VentasTab() {
           </View>
         </View>
       </Modal>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={hideAlert}
+      />
     </View>
   );
 }
@@ -926,5 +1024,41 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: 'white'
+  },
+  usuarioDetalleCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  usuarioDetalleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB'
+  },
+  usuarioDetalleNombre: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827'
+  },
+  usuarioDetalleTotal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#8B5CF6'
+  },
+  totalGeneralCard: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   }
 });
