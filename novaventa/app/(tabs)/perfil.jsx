@@ -1,16 +1,29 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, ActivityIndicator, TextInput, Modal } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import AuthContext from '../../components/AuthContext';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../config/api';
+import CustomAlert from '../../components/CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 export default function Perfil() {
-  const { user, signOut, token } = useContext(AuthContext);
+  const { user, signOut, token, setUser } = useContext(AuthContext);
   const router = useRouter();
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Campos editables
+  const [editNombres, setEditNombres] = useState('');
+  const [editApellidos, setEditApellidos] = useState('');
+  const [editCorreo, setEditCorreo] = useState('');
+  const [editTelefono, setEditTelefono] = useState('');
+  const [editContrasena, setEditContrasena] = useState('');
+  
+  const { alert, alertConfig, hideAlert } = useAlert();
 
   const loadProfileImage = async () => {
     try {
@@ -149,6 +162,57 @@ export default function Perfil() {
     );
   };
 
+  const openEditModal = () => {
+    setEditNombres(user.nombres || '');
+    setEditApellidos(user.apellidos || '');
+    setEditCorreo(user.correo || '');
+    setEditTelefono(user.telefono || '');
+    setEditContrasena('');
+    setEditModalVisible(true);
+  };
+
+  const guardarCambios = async () => {
+    try {
+      setLoading(true);
+
+      const body = {};
+      if (editNombres !== user.nombres) body.nombres = editNombres;
+      if (editApellidos !== user.apellidos) body.apellidos = editApellidos;
+      if (editCorreo !== user.correo) body.correo = editCorreo;
+      if (editTelefono !== user.telefono) body.telefono = editTelefono;
+      if (editContrasena) body.contrasena = editContrasena;
+
+      if (Object.keys(body).length === 0) {
+        alert.warning('Atención', 'No hay cambios para guardar');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/perfil`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.usuario);
+        setEditModalVisible(false);
+        alert.success('Éxito', 'Perfil actualizado correctamente');
+      } else {
+        const error = await response.json();
+        alert.error('Error', error.message || 'No se pudo actualizar el perfil');
+      }
+    } catch (error) {
+      console.error('Error al actualizar perfil:', error);
+      alert.error('Error', 'No se pudo actualizar el perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -180,6 +244,10 @@ export default function Perfil() {
               
               <Text style={styles.name}>{user.nombres} {user.apellidos}</Text>
               <Text style={styles.email}>{user.correo}</Text>
+              
+              <TouchableOpacity style={styles.editButton} onPress={openEditModal}>
+                <Text style={styles.editButtonText}>✏️ Editar Perfil</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.section}>
@@ -215,6 +283,104 @@ export default function Perfil() {
           <Text style={styles.noUser}>No autenticado</Text>
         )}
       </View>
+
+      {/* Modal de Edición */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <Text style={styles.modalTitle}>Editar Perfil</Text>
+
+              <Text style={styles.label}>Nombres</Text>
+              <TextInput
+                style={styles.input}
+                value={editNombres}
+                onChangeText={setEditNombres}
+                placeholder="Nombres"
+              />
+
+              <Text style={styles.label}>Apellidos</Text>
+              <TextInput
+                style={styles.input}
+                value={editApellidos}
+                onChangeText={setEditApellidos}
+                placeholder="Apellidos"
+              />
+
+              <Text style={styles.label}>Correo</Text>
+              <TextInput
+                style={styles.input}
+                value={editCorreo}
+                onChangeText={setEditCorreo}
+                placeholder="correo@ejemplo.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.label}>Teléfono</Text>
+              <TextInput
+                style={styles.input}
+                value={editTelefono}
+                onChangeText={setEditTelefono}
+                placeholder="Teléfono"
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.label}>Nueva Contraseña (opcional)</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={editContrasena}
+                  onChangeText={setEditContrasena}
+                  placeholder="Dejar vacío para no cambiar"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setEditModalVisible(false)}
+                  disabled={loading}
+                >
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={guardarCambios}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={hideAlert}
+      />
     </ScrollView>
   );
 }
@@ -355,5 +521,105 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 16,
     marginTop: 32
+  },
+  editButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 16
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 20,
+    textAlign: 'center'
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    marginTop: 12
+  },
+  input: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16
+  },
+  eyeButton: {
+    padding: 14
+  },
+  eyeIcon: {
+    fontSize: 20
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center'
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  cancelButtonText: {
+    color: '#374151',
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  saveButton: {
+    backgroundColor: '#8B5CF6'
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600'
   }
 });
