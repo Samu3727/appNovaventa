@@ -17,7 +17,6 @@ id int primary key auto_increment,
 nombre_producto varchar(255),
 codigo_producto varchar(6),
 precio_producto int,
+imagen_producto varchar(1000),
 estado tinyint default 1
 );
-
-insert into Usuarios (nombres, apellidos, correo, contrasena) values ('Eliana','Esquivel', 'Admin@admin.com', 'Admin123');
