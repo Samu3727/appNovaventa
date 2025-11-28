@@ -12,7 +12,9 @@ const crearVenta = async (req, res) => {
         // Calcular total
         const total = productos.reduce((sum, p) => sum + (parseFloat(p.precio_unitario || 0) * parseInt(p.cantidad || 1)), 0);
 
-        const [ventaResult] = await db.query('INSERT INTO ventas (usuario_id, total) VALUES (?, ?)', [usuario_id, total]);
+        // Insertar venta con fecha actual
+        const fechaActual = new Date();
+        const [ventaResult] = await db.query('INSERT INTO ventas (usuario_id, fecha, total) VALUES (?, ?, ?)', [usuario_id, fechaActual, total]);
         const ventaId = ventaResult.insertId;
 
         const insertPromises = productos.map(p => {
