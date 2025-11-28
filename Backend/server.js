@@ -9,6 +9,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Rutas API
+const authRoutes = require('./routes/auth');
+const usuariosRoutes = require('./routes/usuarios');
+const productosRoutes = require('./routes/productos');
+const ventasRoutes = require('./routes/ventas');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/productos', productosRoutes);
+app.use('/api/ventas', ventasRoutes);
+
 //Carpeta de imagenes.
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
