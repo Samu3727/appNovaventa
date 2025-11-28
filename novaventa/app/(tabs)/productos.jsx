@@ -76,7 +76,8 @@ export default function ProductosTab() {
       const body = {
         nombre_producto: currentProducto.nombre_producto,
         codigo_producto: currentProducto.codigo_producto || null,
-        precio_producto: parseInt(currentProducto.precio_producto) || 0,
+        precio_producto: parseFloat(currentProducto.precio_producto) || 0,
+        cantidad_producto: 0,
         imagen_producto: currentProducto.imagen_producto
       };
 
@@ -89,7 +90,10 @@ export default function ProductosTab() {
         body: JSON.stringify(body)
       });
 
-      if (!resp.ok) throw new Error('Error al guardar');
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        throw new Error(errorData.error || 'Error al guardar');
+      }
 
       Alert.alert('Éxito', editMode ? 'Producto actualizado' : 'Producto creado');
       setModalVisible(false);

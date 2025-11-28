@@ -9,7 +9,7 @@ export default function UsuariosTab() {
     const [searchQuery, setSearchQuery] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [editMode, setEditMode] = useState(false);
-    const [currentUsuario, setCurrentUsuario] = useState({ id: null, nombres: '', apellidos: '', correo: '', telefono: '', contrasena: '' });
+    const [currentUsuario, setCurrentUsuario] = useState({ id: null, nombres: '', apellidos: '', telefono: '' });
     const { token } = useContext(AuthContext);
 
     const API_BASE = API_BASE_URL;
@@ -34,13 +34,13 @@ export default function UsuariosTab() {
 
     const handleCreate = () => {
         setEditMode(false);
-        setCurrentUsuario({ id: null, nombres: '', apellidos: '', correo: '', telefono: '', contrasena: '' });
+        setCurrentUsuario({ id: null, nombres: '', apellidos: '', telefono: '' });
         setModalVisible(true);
     };
 
     const handleEdit = (usuario) => {
         setEditMode(true);
-        setCurrentUsuario({ ...usuario, contrasena: '' });
+        setCurrentUsuario({ ...usuario });
         setModalVisible(true);
     };
 
@@ -115,7 +115,6 @@ export default function UsuariosTab() {
             <View style={styles.itemContent}>
                 <View>
                     <Text style={styles.name}>{item.nombres} {item.apellidos}</Text>
-                    {item.correo && <Text style={styles.email}>{item.correo}</Text>}
                     {item.telefono && <Text style={styles.phone}>📞 {item.telefono}</Text>}
                 </View>
                 <View style={styles.actions}>
