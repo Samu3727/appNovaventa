@@ -10,10 +10,10 @@ export default function HomeScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.title}>NovaVenta</Text>
-          <Text style={styles.subtitle}>Sistema de Gestión de Ventas</Text>
+          <Text style={styles.title}>NovApp</Text>
+          <Text style={styles.subtitle}>Sistema de Gestión de Ventas y Pedidos.</Text>
           {user && (
-            <Text style={styles.welcome}>Bienvenido, {user.nombres}!</Text>
+            <Text style={styles.welcome}>Bienvenida {user.nombres}!</Text>
           )}
         </View>
 

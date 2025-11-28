@@ -17,7 +17,7 @@ router.post('/update-password', async (req, res) => {
         
         // Actualizar en la base de datos
         const [result] = await db.query(
-            'UPDATE Usuarios SET contrasena = ? WHERE LOWER(correo) = LOWER(?)',
+            'UPDATE usuarios SET contrasena = ? WHERE LOWER(correo) = LOWER(?)',
             [hash, correo]
         );
         
@@ -26,7 +26,7 @@ router.post('/update-password', async (req, res) => {
         }
         
         // Verificar que funcionó
-        const [rows] = await db.query('SELECT * FROM Usuarios WHERE LOWER(correo) = LOWER(?)', [correo]);
+        const [rows] = await db.query('SELECT * FROM usuarios WHERE LOWER(correo) = LOWER(?)', [correo]);
         const usuario = rows[0];
         const esValida = await bcrypt.compare(nuevaContrasena, usuario.contrasena);
         

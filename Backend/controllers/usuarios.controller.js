@@ -41,7 +41,7 @@ function verificaContrasena(password, hash) {
 
 const getUsuarios = async (req, res) => {
     try {
-        const [results] = await db.query('SELECT * FROM Usuarios WHERE estado = 1');
+        const [results] = await db.query('SELECT * FROM usuarios WHERE estado = 1');
         res.json(results);
     } catch (error) {
         res.status(500).json({error: error.message});
@@ -53,7 +53,7 @@ const getUsuarios = async (req, res) => {
 const getUsuarioPorId = async (req, res) => {
     const id = req.params.id;
     try {
-        const [results] = await db.query('SELECT * FROM Usuarios WHERE id = ? AND estado = 1', [id]);
+        const [results] = await db.query('SELECT * FROM usuarios WHERE id = ? AND estado = 1', [id]);
         if (results.length === 0) return res.status(404).json({message: 'Usuario no encontrado'});
         res.json(results[0]);
     } catch (err) {
@@ -67,7 +67,7 @@ const crearUsuario = async (req, res) => {
     try {
         const {nombres, apellidos, telefono} = req.body;
 
-        const sql = 'INSERT INTO Usuarios (nombres, apellidos, telefono) VALUES (?, ?, ?)';
+        const sql = 'INSERT INTO usuarios (nombres, apellidos, telefono) VALUES (?, ?, ?)';
         const values = [nombres, apellidos, telefono || null];
 
         const [result] = await db.query(sql, values);
@@ -88,7 +88,7 @@ const actualizarUsuario = async (req, res) => {
         nombres, apellidos, telefono
     } = req.body;
 
-    const sql = 'UPDATE Usuarios SET nombres = ?, apellidos = ?, telefono = ? WHERE id = ?';
+    const sql = 'UPDATE usuarios SET nombres = ?, apellidos = ?, telefono = ? WHERE id = ?';
 
     const values = [nombres, apellidos, telefono || null, id];
 
@@ -105,7 +105,7 @@ const actualizarUsuario = async (req, res) => {
 const eliminarUsuario = async (req, res) => {
     const id = req.params.id;
     try {
-        await db.query('UPDATE Usuarios SET estado = 0 WHERE id = ?', [id]);
+        await db.query('UPDATE usuarios SET estado = 0 WHERE id = ?', [id]);
         res.json({message: 'Usuario eliminado con exito'});
     } catch (error) {
         res.status(500).json({error: error.message});
@@ -126,12 +126,12 @@ const buscarUsuarios = async (req, res) => {
         let values;
 
         if (letra) {
-            query = 'SELECT * FROM Usuarios WHERE estado = 1 AND (nombres LIKE ? OR apellidos LIKE ?) ORDER BY nombres ASC LIMIT ? OFFSET ?';
-            countQuery = 'SELECT COUNT(*) AS total FROM Usuarios WHERE estado = 1 AND (nombres LIKE ? OR apellidos LIKE ?)';
+            query = 'SELECT * FROM usuarios WHERE estado = 1 AND (nombres LIKE ? OR apellidos LIKE ?) ORDER BY nombres ASC LIMIT ? OFFSET ?';
+            countQuery = 'SELECT COUNT(*) AS total FROM usuarios WHERE estado = 1 AND (nombres LIKE ? OR apellidos LIKE ?)';
             values = [`${letra}%`, `${letra}%`, limitNum, offset];
         } else {
-            query = 'SELECT * FROM Usuarios WHERE estado = 1 ORDER BY nombres ASC LIMIT ? OFFSET ?';
-            countQuery = 'SELECT COUNT(*) AS total FROM Usuarios WHERE estado = 1';
+            query = 'SELECT * FROM usuarios WHERE estado = 1 ORDER BY nombres ASC LIMIT ? OFFSET ?';
+            countQuery = 'SELECT COUNT(*) AS total FROM usuarios WHERE estado = 1';
             values = [limitNum, offset];
         }
 

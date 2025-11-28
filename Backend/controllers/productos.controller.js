@@ -7,7 +7,7 @@ const crearProducto = async (req, res) => {
 
         const imagen_producto = req.file ? req.file.filename : req.body.imagen_producto || null;
 
-        const query = 'INSERT INTO Productos (nombre_producto, codigo_producto, precio_producto, imagen_producto) VALUES (?, ?, ?, ?)';
+        const query = 'INSERT INTO productos (nombre_producto, codigo_producto, precio_producto, imagen_producto) VALUES (?, ?, ?, ?)';
         const values = [nombre_producto, codigo_producto || null, precio_producto || 0, imagen_producto];
 
         const [result] = await db.query(query, values);
@@ -27,7 +27,7 @@ const listarProductos = async (req, res) => {
         const limitNum = parseInt(limit) || 20;
         const offset = (pageNum - 1) * limitNum;
 
-        let query = 'SELECT * FROM Productos WHERE estado = 1';
+        let query = 'SELECT * FROM productos WHERE estado = 1';
         const params = [];
 
         if (q) {
@@ -41,7 +41,7 @@ const listarProductos = async (req, res) => {
         const [rows] = await db.query(query, params);
 
         // total count
-        let countQuery = 'SELECT COUNT(*) as total FROM Productos WHERE estado = 1';
+        let countQuery = 'SELECT COUNT(*) as total FROM productos WHERE estado = 1';
         const countParams = [];
         if (q) {
             countQuery += ' AND (nombre_producto LIKE ? OR codigo_producto LIKE ?)';
@@ -64,7 +64,7 @@ const actualizarProducto = async (req, res) => {
 
         const imagen_producto = req.file ? req.file.filename : req.body.imagen_producto || null;
 
-        const query = 'UPDATE Productos SET nombre_producto = ?, codigo_producto = ?, precio_producto = ?, imagen_producto = ? WHERE id = ?';
+        const query = 'UPDATE productos SET nombre_producto = ?, codigo_producto = ?, precio_producto = ?, imagen_producto = ? WHERE id = ?';
         const values = [nombre_producto, codigo_producto || null, precio_producto || 0, imagen_producto, id];
 
         await db.query(query, values);
@@ -79,7 +79,7 @@ const actualizarProducto = async (req, res) => {
 const eliminarProducto = async (req, res) => {
     try {
         const { id } = req.params;
-        await db.query('UPDATE Productos SET estado = 0 WHERE id = ?', [id]);
+        await db.query('UPDATE productos SET estado = 0 WHERE id = ?', [id]);
         res.json({ message: 'Producto eliminado correctamente' });
     } catch (error) {
         console.error('Error al eliminar el producto: ', error);

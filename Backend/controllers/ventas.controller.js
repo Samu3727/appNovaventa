@@ -12,13 +12,13 @@ const crearVenta = async (req, res) => {
         // Calcular total
         const total = productos.reduce((sum, p) => sum + (parseFloat(p.precio_unitario || 0) * parseInt(p.cantidad || 1)), 0);
 
-        const [ventaResult] = await db.query('INSERT INTO Ventas (usuario_id, total) VALUES (?, ?)', [usuario_id, total]);
+        const [ventaResult] = await db.query('INSERT INTO ventas (usuario_id, total) VALUES (?, ?)', [usuario_id, total]);
         const ventaId = ventaResult.insertId;
 
         const insertPromises = productos.map(p => {
             const precio = parseFloat(p.precio_unitario || 0).toFixed(2);
             const cantidad = parseInt(p.cantidad || 1);
-            return db.query('INSERT INTO VentasProductos (venta_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)', [ventaId, p.producto_id, cantidad, precio]);
+            return db.query('INSERT INTO ventasproductos (venta_id, producto_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)', [ventaId, p.producto_id, cantidad, precio]);
         });
 
         await Promise.all(insertPromises);
@@ -34,7 +34,7 @@ const crearVenta = async (req, res) => {
 const listarVentas = async (req, res) => {
     try {
         const { usuario_id } = req.query;
-        let query = 'SELECT v.*, u.nombres, u.apellidos FROM Ventas v LEFT JOIN Usuarios u ON v.usuario_id = u.id WHERE v.estado = 1';
+        let query = 'SELECT v.*, u.nombres, u.apellidos FROM ventas v LEFT JOIN usuarios u ON v.usuario_id = u.id WHERE v.estado = 1';
         const params = [];
         if (usuario_id) {
             query += ' AND v.usuario_id = ?';
@@ -54,11 +54,11 @@ const listarVentas = async (req, res) => {
 const getVentaPorId = async (req, res) => {
     try {
         const { id } = req.params;
-        const [ventas] = await db.query('SELECT v.*, u.nombres, u.apellidos FROM Ventas v LEFT JOIN Usuarios u ON v.usuario_id = u.id WHERE v.id = ?', [id]);
+        const [ventas] = await db.query('SELECT v.*, u.nombres, u.apellidos FROM ventas v LEFT JOIN usuarios u ON v.usuario_id = u.id WHERE v.id = ?', [id]);
         if (!ventas || ventas.length === 0) return res.status(404).json({ message: 'Venta no encontrada' });
         const venta = ventas[0];
 
-        const [productos] = await db.query('SELECT vp.*, p.nombre_producto, p.codigo_producto FROM VentasProductos vp JOIN Productos p ON p.id = vp.producto_id WHERE vp.venta_id = ?', [id]);
+        const [productos] = await db.query('SELECT vp.*, p.nombre_producto, p.codigo_producto FROM ventasproductos vp JOIN productos p ON p.id = vp.producto_id WHERE vp.venta_id = ?', [id]);
 
         res.json({ venta, productos });
     } catch (error) {
@@ -71,7 +71,7 @@ const getVentaPorId = async (req, res) => {
 const eliminarVenta = async (req, res) => {
     try {
         const { id } = req.params;
-        await db.query('UPDATE Ventas SET estado = 0 WHERE id = ?', [id]);
+        await db.query('UPDATE ventas SET estado = 0 WHERE id = ?', [id]);
         res.json({ message: 'Venta eliminada exitosamente' });
     } catch (error) {
         console.error('Error al eliminar venta: ', error);
