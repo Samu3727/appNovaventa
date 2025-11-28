@@ -65,18 +65,30 @@ const getUsuarioPorId = async (req, res) => {
 
 const crearUsuario = async (req, res) => {
     try {
-        const {nombres, apellidos, telefono} = req.body;
+        const {nombres, apellidos, correo, telefono, contrasena} = req.body;
 
-        const sql = 'INSERT INTO usuarios (nombres, apellidos, telefono) VALUES (?, ?, ?)';
-        const values = [nombres, apellidos, telefono || null];
+        // Validar campos requeridos
+        if (!nombres || !apellidos || !correo || !contrasena) {
+            return res.status(400).json({error: 'Nombres, apellidos, correo y contraseña son requeridos'});
+        }
+
+        // Encriptar contraseña
+        const hashedPassword = await bcrypt.hash(contrasena, 10);
+
+        const sql = 'INSERT INTO usuarios (nombres, apellidos, correo, telefono, contrasena, estado) VALUES (?, ?, ?, ?, ?, ?)';
+        const values = [nombres, apellidos, correo, telefono || null, hashedPassword, 1];
 
         const [result] = await db.query(sql, values);
 
-        console.log('Usuario creado con exito', {id: result.insertId, nombres, apellidos, telefono});
+        console.log('Usuario creado con exito', {id: result.insertId, nombres, apellidos, correo, telefono});
 
-        res.status(201).json({id: result.insertId, nombres, apellidos, telefono});
+        res.status(201).json({id: result.insertId, nombres, apellidos, correo, telefono});
     } catch (error) {
-        res.status(500).json({error: error.message});
+        if (error.code === 'ER_DUP_ENTRY') {
+            res.status(400).json({error: 'El correo ya está registrado'});
+        } else {
+            res.status(500).json({error: error.message});
+        }
     }
 };
 

@@ -12,8 +12,11 @@ export default function VentasTab() {
   const [modalVisible, setModalVisible] = useState(false);
   const [detalleModalVisible, setDetalleModalVisible] = useState(false);
   const [ventaDetalle, setVentaDetalle] = useState(null);
-  const [selectedUsuario, setSelectedUsuario] = useState(null);
-  const [carrito, setCarrito] = useState([]);
+  
+  // Nueva estructura: array de usuarios con sus carritos
+  // Formato: [{ usuario_id, nombres, apellidos, carrito: [{producto_id, nombre_producto, cantidad, precio_unitario}] }]
+  const [usuariosVentas, setUsuariosVentas] = useState([]);
+  
   const { token } = useContext(AuthContext);
 
   const API_BASE = API_BASE_URL;
@@ -36,9 +39,10 @@ export default function VentasTab() {
         headers: { Authorization: `Bearer ${token}` } 
       });
       const data = await resp.json();
-      setUsuarios(data);
+      setUsuarios(data.usuarios || data || []);
     } catch (error) {
       console.error(error);
+      setUsuarios([]);
     }
   }, [token]);
 
@@ -48,9 +52,10 @@ export default function VentasTab() {
         headers: { Authorization: `Bearer ${token}` } 
       });
       const data = await resp.json();
-      setProductos(data.items || data);
+      setProductos(data.items || data || []);
     } catch (error) {
       console.error(error);
+      setProductos([]);
     }
   }, [token]);
 
@@ -63,70 +68,126 @@ export default function VentasTab() {
   const handleNuevaVenta = async () => {
     await fetchUsuarios();
     await fetchProductos();
-    setCarrito([]);
-    setSelectedUsuario(null);
+    setUsuariosVentas([]);
     setModalVisible(true);
   };
 
-  const agregarProducto = (producto) => {
-    const existe = carrito.find(item => item.producto_id === producto.id);
-    if (existe) {
-      setCarrito(carrito.map(item => 
-        item.producto_id === producto.id 
-          ? { ...item, cantidad: item.cantidad + 1 }
-          : item
-      ));
-    } else {
-      setCarrito([...carrito, {
-        producto_id: producto.id,
-        nombre_producto: producto.nombre_producto,
-        cantidad: 1,
-        precio_unitario: producto.precio_producto || 0
-      }]);
+  // Agregar un usuario al pedido
+  const agregarUsuario = (usuario) => {
+    if (usuariosVentas.find(u => u.usuario_id === usuario.id)) {
+      Alert.alert('Info', 'Este usuario ya está agregado');
+      return;
     }
+    setUsuariosVentas([...usuariosVentas, {
+      usuario_id: usuario.id,
+      nombres: usuario.nombres,
+      apellidos: usuario.apellidos,
+      carrito: []
+    }]);
   };
 
-  const quitarProducto = (producto_id) => {
-    const item = carrito.find(i => i.producto_id === producto_id);
-    if (item.cantidad > 1) {
-      setCarrito(carrito.map(i => 
-        i.producto_id === producto_id 
-          ? { ...i, cantidad: i.cantidad - 1 }
-          : i
-      ));
-    } else {
-      setCarrito(carrito.filter(i => i.producto_id !== producto_id));
-    }
+  // Quitar un usuario del pedido
+  const quitarUsuario = (usuario_id) => {
+    setUsuariosVentas(usuariosVentas.filter(u => u.usuario_id !== usuario_id));
   };
 
-  const calcularTotal = () => {
+  // Agregar producto al carrito de un usuario específico
+  const agregarProductoAUsuario = (usuario_id, producto) => {
+    setUsuariosVentas(usuariosVentas.map(u => {
+      if (u.usuario_id !== usuario_id) return u;
+      
+      const existe = u.carrito.find(item => item.producto_id === producto.id);
+      if (existe) {
+        return {
+          ...u,
+          carrito: u.carrito.map(item =>
+            item.producto_id === producto.id
+              ? { ...item, cantidad: item.cantidad + 1 }
+              : item
+          )
+        };
+      } else {
+        return {
+          ...u,
+          carrito: [...u.carrito, {
+            producto_id: producto.id,
+            nombre_producto: producto.nombre_producto,
+            cantidad: 1,
+            precio_unitario: producto.precio_producto || 0
+          }]
+        };
+      }
+    }));
+  };
+
+  // Quitar producto del carrito de un usuario
+  const quitarProductoDeUsuario = (usuario_id, producto_id) => {
+    setUsuariosVentas(usuariosVentas.map(u => {
+      if (u.usuario_id !== usuario_id) return u;
+      
+      const item = u.carrito.find(i => i.producto_id === producto_id);
+      if (!item) return u;
+      
+      if (item.cantidad > 1) {
+        return {
+          ...u,
+          carrito: u.carrito.map(i =>
+            i.producto_id === producto_id
+              ? { ...i, cantidad: i.cantidad - 1 }
+              : i
+          )
+        };
+      } else {
+        return {
+          ...u,
+          carrito: u.carrito.filter(i => i.producto_id !== producto_id)
+        };
+      }
+    }));
+  };
+
+  // Calcular total por usuario
+  const calcularTotalUsuario = (carrito) => {
     return carrito.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
   };
 
+  // Calcular total general
+  const calcularTotalGeneral = () => {
+    return usuariosVentas.reduce((sum, u) => sum + calcularTotalUsuario(u.carrito), 0);
+  };
+
   const guardarVenta = async () => {
-    if (!selectedUsuario || carrito.length === 0) {
-      return Alert.alert('Error', 'Seleccione un usuario y agregue productos');
+    if (usuariosVentas.length === 0) {
+      return Alert.alert('Error', 'Agregue al menos un usuario con productos');
     }
 
-    const total = calcularTotal();
+    // Verificar que todos los usuarios tengan productos
+    const sinProductos = usuariosVentas.filter(u => u.carrito.length === 0);
+    if (sinProductos.length > 0) {
+      return Alert.alert('Error', 'Todos los usuarios deben tener al menos un producto');
+    }
 
     try {
-      const resp = await fetch(`${API_BASE}/ventas`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          usuario_id: selectedUsuario,
-          productos: carrito,
-          total: total
-        })
+      // Crear una venta por cada usuario
+      const promesas = usuariosVentas.map(usuario => {
+        const total = calcularTotalUsuario(usuario.carrito);
+        return fetch(`${API_BASE}/ventas`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            usuario_id: usuario.usuario_id,
+            productos: usuario.carrito,
+            total: total
+          })
+        });
       });
 
-      if (!resp.ok) throw new Error('Error al guardar venta');
+      await Promise.all(promesas);
 
-      Alert.alert('Éxito', 'Venta registrada correctamente');
+      Alert.alert('Éxito', `Se registraron ${usuariosVentas.length} venta(s) correctamente`);
       setModalVisible(false);
       fetchVentas();
     } catch (error) {
@@ -191,36 +252,11 @@ export default function VentasTab() {
     );
   };
 
-  const renderProductoCarrito = ({ item }) => (
-    <View style={styles.carritoItem}>
-      <View style={styles.carritoInfo}>
-        <Text style={styles.carritoNombre}>{item.nombre_producto}</Text>
-        <Text style={styles.carritoPrecio}>${item.precio_unitario} x {item.cantidad}</Text>
-      </View>
-      <View style={styles.carritoActions}>
-        <TouchableOpacity onPress={() => quitarProducto(item.producto_id)} style={styles.btnCantidad}>
-          <Text style={styles.btnText}>-</Text>
-        </TouchableOpacity>
-        <Text style={styles.cantidad}>{item.cantidad}</Text>
-        <TouchableOpacity onPress={() => agregarProducto({ id: item.producto_id, nombre_producto: item.nombre_producto, precio_producto: item.precio_unitario })} style={styles.btnCantidad}>
-          <Text style={styles.btnText}>+</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderProductoDisponible = ({ item }) => (
-    <TouchableOpacity style={styles.productoItem} onPress={() => agregarProducto(item)}>
-      <Text style={styles.productoNombre}>{item.nombre_producto}</Text>
-      <Text style={styles.productoPrecio}>${item.precio_producto || 0}</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.nuevaButton} onPress={handleNuevaVenta}>
-          <Text style={styles.nuevaButtonText}>+ Nueva Venta</Text>
+          <Text style={styles.nuevaButtonText}>+ Nuevo Pedido</Text>
         </TouchableOpacity>
       </View>
 
@@ -230,7 +266,7 @@ export default function VentasTab() {
         renderItem={renderVenta}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>No hay ventas registradas</Text>
+          <Text style={styles.empty}>No hay pedidos registrados</Text>
         }
       />
 
@@ -243,17 +279,23 @@ export default function VentasTab() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView>
-              <Text style={styles.modalTitle}>Nueva Venta</Text>
+              <Text style={styles.modalTitle}>Nuevo Pedido Múltiple</Text>
 
-              <Text style={styles.label}>Seleccionar Usuario *</Text>
+              {/* Seleccionar Usuario para agregar */}
+              <Text style={styles.label}>Agregar Usuario</Text>
               <View style={styles.pickerContainer}>
                 <Picker
-                  selectedValue={selectedUsuario}
-                  onValueChange={(value) => setSelectedUsuario(value)}
+                  selectedValue={null}
+                  onValueChange={(value) => {
+                    if (value && usuarios) {
+                      const usuario = usuarios.find(u => u.id === value);
+                      if (usuario) agregarUsuario(usuario);
+                    }
+                  }}
                   style={styles.picker}
                 >
                   <Picker.Item label="Seleccione un usuario..." value={null} />
-                  {usuarios.map(u => (
+                  {(usuarios || []).filter(u => !usuariosVentas.find(uv => uv.usuario_id === u.id)).map(u => (
                     <Picker.Item 
                       key={u.id} 
                       label={`${u.nombres} ${u.apellidos}`} 
@@ -263,32 +305,93 @@ export default function VentasTab() {
                 </Picker>
               </View>
 
-              <Text style={styles.label}>Carrito ({carrito.length})</Text>
-              {carrito.length > 0 ? (
-                <FlatList
-                  data={carrito}
-                  keyExtractor={(i) => String(i.producto_id)}
-                  renderItem={renderProductoCarrito}
-                  scrollEnabled={false}
-                  style={styles.carritoList}
-                />
+              {/* Lista de usuarios agregados con sus carritos */}
+              {usuariosVentas.length > 0 ? (
+                <>
+                  <Text style={styles.label}>Usuarios en este pedido ({usuariosVentas.length})</Text>
+                  {usuariosVentas.map((usuario) => (
+                    <View key={usuario.usuario_id} style={styles.usuarioCard}>
+                      <View style={styles.usuarioHeader}>
+                        <Text style={styles.usuarioNombre}>
+                          {usuario.nombres} {usuario.apellidos}
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={() => quitarUsuario(usuario.usuario_id)}
+                          style={styles.btnQuitar}
+                        >
+                          <Text style={styles.btnQuitarText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Carrito del usuario */}
+                      {usuario.carrito.length > 0 && (
+                        <View style={styles.usuarioCarrito}>
+                          {usuario.carrito.map((item) => (
+                            <View key={item.producto_id} style={styles.itemCarrito}>
+                              <Text style={styles.itemNombre}>{item.nombre_producto}</Text>
+                              <View style={styles.itemControls}>
+                                <TouchableOpacity 
+                                  onPress={() => quitarProductoDeUsuario(usuario.usuario_id, item.producto_id)}
+                                  style={styles.btnCantidadSmall}
+                                >
+                                  <Text style={styles.btnText}>-</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.cantidadSmall}>{item.cantidad}</Text>
+                                <TouchableOpacity 
+                                  onPress={() => agregarProductoAUsuario(usuario.usuario_id, {
+                                    id: item.producto_id,
+                                    nombre_producto: item.nombre_producto,
+                                    precio_producto: item.precio_unitario
+                                  })}
+                                  style={styles.btnCantidadSmall}
+                                >
+                                  <Text style={styles.btnText}>+</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.itemPrecio}>
+                                  ${(item.cantidad * item.precio_unitario).toFixed(2)}
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* Agregar productos al usuario */}
+                      <Text style={styles.labelSmall}>Agregar producto:</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productosHorizontal}>
+                        {(productos || []).map((p) => (
+                          <TouchableOpacity 
+                            key={p.id}
+                            style={styles.productoChip}
+                            onPress={() => agregarProductoAUsuario(usuario.usuario_id, p)}
+                          >
+                            <Text style={styles.productoChipText}>{p.nombre_producto}</Text>
+                            <Text style={styles.productoChipPrecio}>${p.precio_producto}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+
+                      {/* Total del usuario */}
+                      <View style={styles.totalUsuario}>
+                        <Text style={styles.totalUsuarioLabel}>Total:</Text>
+                        <Text style={styles.totalUsuarioValue}>
+                          ${calcularTotalUsuario(usuario.carrito).toFixed(2)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+
+                  {/* Total general */}
+                  <View style={styles.totalGeneral}>
+                    <Text style={styles.totalGeneralLabel}>TOTAL GENERAL:</Text>
+                    <Text style={styles.totalGeneralValue}>
+                      ${calcularTotalGeneral().toFixed(2)}
+                    </Text>
+                  </View>
+                </>
               ) : (
-                <Text style={styles.carritoVacio}>Carrito vacío</Text>
+                <Text style={styles.empty}>Agregue usuarios para comenzar</Text>
               )}
-
-              <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>Total:</Text>
-                <Text style={styles.totalValue}>${calcularTotal()}</Text>
-              </View>
-
-              <Text style={styles.label}>Agregar Productos</Text>
-              <FlatList
-                data={productos}
-                keyExtractor={(i) => String(i.id)}
-                renderItem={renderProductoDisponible}
-                scrollEnabled={false}
-                style={styles.productosList}
-              />
 
               <View style={styles.modalActions}>
                 <TouchableOpacity 
@@ -301,7 +404,7 @@ export default function VentasTab() {
                   style={[styles.modalButton, styles.saveButton]} 
                   onPress={guardarVenta}
                 >
-                  <Text style={styles.saveButtonText}>Guardar Venta</Text>
+                  <Text style={styles.saveButtonText}>Guardar ({usuariosVentas.length})</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -686,5 +789,142 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#111827'
+  },
+  // Estilos para multi-usuario
+  usuarioCard: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  usuarioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  usuarioNombre: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827'
+  },
+  btnQuitar: {
+    backgroundColor: '#EF4444',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  btnQuitarText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700'
+  },
+  usuarioCarrito: {
+    marginBottom: 8
+  },
+  itemCarrito: {
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 6
+  },
+  itemNombre: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4
+  },
+  itemControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  btnCantidadSmall: {
+    backgroundColor: '#E5E7EB',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cantidadSmall: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginHorizontal: 8
+  },
+  itemPrecio: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8B5CF6'
+  },
+  labelSmall: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6
+  },
+  productosHorizontal: {
+    marginBottom: 10
+  },
+  productoChip: {
+    backgroundColor: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+    alignItems: 'center'
+  },
+  productoChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8B5CF6'
+  },
+  productoChipPrecio: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2
+  },
+  totalUsuario: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 4
+  },
+  totalUsuarioLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280'
+  },
+  totalUsuarioValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827'
+  },
+  totalGeneral: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#8B5CF6',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8
+  },
+  totalGeneralLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white'
+  },
+  totalGeneralValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: 'white'
   }
 });

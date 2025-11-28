@@ -21,19 +21,19 @@ export default function HomeScreen() {
           <View style={styles.featureCard}>
             <Text style={styles.featureIcon}>👥</Text>
             <Text style={styles.featureTitle}>Usuarios</Text>
-            <Text style={styles.featureDesc}>Gestiona usuarios con CRUD completo</Text>
+            <Text style={styles.featureDesc}>Gestiona tus clientes de forma eficiente.</Text>
           </View>
 
           <View style={styles.featureCard}>
             <Text style={styles.featureIcon}>📦</Text>
             <Text style={styles.featureTitle}>Productos</Text>
-            <Text style={styles.featureDesc}>Administra tu inventario</Text>
+            <Text style={styles.featureDesc}>Administra tu inventario.</Text>
           </View>
 
           <View style={styles.featureCard}>
             <Text style={styles.featureIcon}>🛒</Text>
-            <Text style={styles.featureTitle}>Ventas</Text>
-            <Text style={styles.featureDesc}>Registra ventas con productos</Text>
+            <Text style={styles.featureTitle}>Pedidos</Text>
+            <Text style={styles.featureDesc}>Gestiona tus pedidos.</Text>
           </View>
 
           <View style={styles.featureCard}>
