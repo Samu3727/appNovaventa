@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, Alert, Modal, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, Alert, Modal, ScrollView } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import AuthContext from '../../components/AuthContext';
 import { API_BASE_URL } from '../../config/api';
@@ -13,8 +13,7 @@ export default function ProductosTab() {
     id: null, 
     nombre_producto: '', 
     codigo_producto: '', 
-    precio_producto: '', 
-    imagen_producto: null 
+    precio_producto: ''
   });
   const { token } = useContext(AuthContext);
 
@@ -46,8 +45,7 @@ export default function ProductosTab() {
       id: null, 
       nombre_producto: '', 
       codigo_producto: '', 
-      precio_producto: '', 
-      imagen_producto: null 
+      precio_producto: ''
     });
     setModalVisible(true);
   };
@@ -77,8 +75,7 @@ export default function ProductosTab() {
         nombre_producto: currentProducto.nombre_producto,
         codigo_producto: currentProducto.codigo_producto || null,
         precio_producto: parseFloat(currentProducto.precio_producto) || 0,
-        cantidad_producto: 0,
-        imagen_producto: currentProducto.imagen_producto
+        cantidad_producto: 0
       };
 
       const resp = await fetch(url, {
@@ -133,16 +130,9 @@ export default function ProductosTab() {
     <View style={styles.item}>
       <View style={styles.itemContent}>
         <View style={styles.productInfo}>
-          {item.imagen_producto ? (
-            <Image 
-              source={{ uri: `${API_BASE.replace('/api', '')}/uploads/${item.imagen_producto}` }} 
-              style={styles.productImage}
-            />
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Text style={styles.placeholderText}>📦</Text>
-            </View>
-          )}
+          <View style={styles.placeholderImage}>
+            <Text style={styles.placeholderText}>📦</Text>
+          </View>
           <View style={styles.productDetails}>
             <Text style={styles.productName}>{item.nombre_producto}</Text>
             {item.codigo_producto && (

@@ -9,12 +9,11 @@ const crearProducto = async (req, res) => {
             return res.status(400).json({ error: 'El nombre del producto es requerido' });
         }
 
-        const imagen_producto = req.file ? req.file.filename : req.body.imagen_producto || null;
         const precio = parseFloat(precio_producto) || 0;
         const cantidad = parseInt(cantidad_producto) || 0;
 
-        const query = 'INSERT INTO productos (nombre_producto, codigo_producto, precio_producto, cantidad_producto, imagen_producto) VALUES (?, ?, ?, ?, ?)';
-        const values = [nombre_producto, codigo_producto || null, precio, cantidad, imagen_producto];
+        const query = 'INSERT INTO productos (nombre_producto, codigo_producto, precio_producto, cantidad_producto) VALUES (?, ?, ?, ?)';
+        const values = [nombre_producto, codigo_producto || null, precio, cantidad];
 
         const [result] = await db.query(query, values);
 
@@ -72,12 +71,11 @@ const actualizarProducto = async (req, res) => {
             return res.status(400).json({ error: 'El nombre del producto es requerido' });
         }
 
-        const imagen_producto = req.file ? req.file.filename : req.body.imagen_producto || null;
         const precio = parseFloat(precio_producto) || 0;
         const cantidad = parseInt(cantidad_producto) || 0;
 
-        const query = 'UPDATE productos SET nombre_producto = ?, codigo_producto = ?, precio_producto = ?, cantidad_producto = ?, imagen_producto = ? WHERE id = ?';
-        const values = [nombre_producto, codigo_producto || null, precio, cantidad, imagen_producto, id];
+        const query = 'UPDATE productos SET nombre_producto = ?, codigo_producto = ?, precio_producto = ?, cantidad_producto = ? WHERE id = ?';
+        const values = [nombre_producto, codigo_producto || null, precio, cantidad, id];
 
         await db.query(query, values);
         res.status(200).json({ message: 'Producto actualizado con exito' });
