@@ -43,8 +43,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ventas"
         options={{
-          title: 'Ventas',
-          headerTitle: 'Registro de Ventas',
+          title: 'Pedidos',
+          headerTitle: 'Registro de Pedidos',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🛒</Text>,
         }}
       />

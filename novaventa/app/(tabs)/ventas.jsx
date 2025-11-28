@@ -174,16 +174,21 @@ export default function VentasTab() {
     );
   };
 
-  const renderVenta = ({ item }) => (
-    <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.id)}>
-      <View style={styles.ventaHeader}>
-        <Text style={styles.ventaId}>Venta #{item.id}</Text>
-        <Text style={styles.ventaTotal}>${item.total}</Text>
-      </View>
-      <Text style={styles.ventaFecha}>{new Date(item.fecha).toLocaleDateString()}</Text>
-      <Text style={styles.ventaUsuario}>Usuario ID: {item.usuario_id}</Text>
-    </TouchableOpacity>
-  );
+  const renderVenta = ({ item }) => {
+    const fecha = new Date(item.fecha);
+    const fechaFormato = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    
+    return (
+      <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.id)}>
+        <View style={styles.ventaHeader}>
+          <Text style={styles.ventaId}>Pedido {fechaFormato}</Text>
+          <Text style={styles.ventaTotal}>${item.total}</Text>
+        </View>
+        <Text style={styles.ventaFecha}>{fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</Text>
+        <Text style={styles.ventaUsuario}>Usuario ID: {item.usuario_id}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderProductoCarrito = ({ item }) => (
     <View style={styles.carritoItem}>
@@ -315,7 +320,9 @@ export default function VentasTab() {
             <ScrollView>
               {ventaDetalle && (
                 <>
-                  <Text style={styles.modalTitle}>Detalle de Venta #{ventaDetalle.venta?.id}</Text>
+                  <Text style={styles.modalTitle}>
+                    Pedido {new Date(ventaDetalle.venta?.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </Text>
                   
                   <View style={styles.detalleCard}>
                     <Text style={styles.detalleLabel}>Fecha:</Text>
