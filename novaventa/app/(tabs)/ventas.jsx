@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, ScrollView, TextInput } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import AuthContext from '../../components/AuthContext';
@@ -18,6 +18,7 @@ export default function VentasTab() {
   // Nueva estructura: array de usuarios con sus carritos
   // Formato: [{ usuario_id, nombres, apellidos, carrito: [{producto_id, nombre_producto, cantidad, precio_unitario}] }]
   const [usuariosVentas, setUsuariosVentas] = useState([]);
+  const [searchProducto, setSearchProducto] = useState('');
   
   const { token } = useContext(AuthContext);
   const { alert, alertConfig, hideAlert } = useAlert();
@@ -435,8 +436,23 @@ export default function VentasTab() {
 
                       {/* Agregar productos al usuario */}
                       <Text style={styles.labelSmall}>Agregar producto:</Text>
+                      
+                      {/* Buscador de productos */}
+                      <View style={styles.searchContainer}>
+                        <Text style={styles.searchIcon}>🔍</Text>
+                        <TextInput
+                          style={styles.searchInput}
+                          placeholder="Buscar producto..."
+                          value={searchProducto}
+                          onChangeText={setSearchProducto}
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productosHorizontal}>
-                        {(productos || []).map((p) => (
+                        {(productos || [])
+                          .filter(p => p.nombre_producto.toLowerCase().includes(searchProducto.toLowerCase()))
+                          .map((p) => (
                           <TouchableOpacity 
                             key={p.id}
                             style={styles.productoChip}
@@ -965,6 +981,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     marginBottom: 6
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827'
   },
   productosHorizontal: {
     marginBottom: 10
