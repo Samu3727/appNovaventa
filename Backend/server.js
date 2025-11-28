@@ -55,6 +55,22 @@ app.use('/api/ventas', ventasRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Ruta raíz informativa
+app.get('/', (req, res) => {
+    res.json({
+        message: 'API Novaventa',
+        version: '1.0.0',
+        endpoints: {
+            health: '/api/health',
+            auth: '/api/auth/login',
+            usuarios: '/api/usuarios',
+            productos: '/api/productos',
+            ventas: '/api/ventas'
+        },
+        status: 'running'
+    });
+});
+
 //Manejo de rutas inexistentes.
 
 app.use((req, res, next) => {
