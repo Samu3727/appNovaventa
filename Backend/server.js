@@ -9,6 +9,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+    try {
+        const db = require('./models/conexion');
+        await db.query('SELECT 1');
+        res.json({ 
+            status: 'ok', 
+            message: 'Server and database are running',
+            env: {
+                DB_HOST: process.env.DB_HOST ? 'configured' : 'missing',
+                DB_USER: process.env.DB_USER ? 'configured' : 'missing',
+                DB_NAME: process.env.DB_NAME ? 'configured' : 'missing',
+                DB_PORT: process.env.DB_PORT ? 'configured' : 'missing',
+                SECRET_KEY: process.env.SECRET_KEY ? 'configured' : 'missing'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message,
+            env: {
+                DB_HOST: process.env.DB_HOST ? 'configured' : 'missing',
+                DB_USER: process.env.DB_USER ? 'configured' : 'missing',
+                DB_NAME: process.env.DB_NAME ? 'configured' : 'missing',
+                DB_PORT: process.env.DB_PORT ? 'configured' : 'missing',
+                SECRET_KEY: process.env.SECRET_KEY ? 'configured' : 'missing'
+            }
+        });
+    }
+});
+
 // Rutas API
 const authRoutes = require('./routes/auth');
 const usuariosRoutes = require('./routes/usuarios');
