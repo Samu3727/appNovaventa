@@ -1,12 +1,14 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AuthContext from '../components/AuthContext';
 
 export default function Login() {
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
   const { signIn } = useContext(AuthContext);
   const router = useRouter();
 
@@ -42,14 +44,26 @@ export default function Login() {
           placeholderTextColor="#9CA3AF"
         />
         
-        <TextInput 
-          placeholder="Contraseña" 
-          style={styles.input} 
-          value={contrasena} 
-          onChangeText={setContrasena} 
-          secureTextEntry
-          placeholderTextColor="#9CA3AF"
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput 
+            placeholder="Contraseña" 
+            style={styles.passwordInput} 
+            value={contrasena} 
+            onChangeText={setContrasena} 
+            secureTextEntry={!mostrarPassword}
+            placeholderTextColor="#9CA3AF"
+          />
+          <TouchableOpacity 
+            style={styles.eyeButton}
+            onPress={() => setMostrarPassword(!mostrarPassword)}
+          >
+            <Ionicons 
+              name={mostrarPassword ? "eye-off" : "eye"} 
+              size={24} 
+              color="#6B7280" 
+            />
+          </TouchableOpacity>
+        </View>
         
         <TouchableOpacity 
           style={[styles.button, loading && styles.buttonDisabled]} 
@@ -105,6 +119,25 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#E5E7EB',
     fontSize: 16
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 16
+  },
+  passwordInput: {
+    backgroundColor: '#F9FAFB', 
+    padding: 14, 
+    paddingRight: 50,
+    borderRadius: 12, 
+    borderWidth: 1, 
+    borderColor: '#E5E7EB',
+    fontSize: 16
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 14,
+    top: 12,
+    padding: 4
   },
   button: { 
     backgroundColor: '#10B981', 
