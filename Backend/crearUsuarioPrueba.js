@@ -1,5 +1,6 @@
 const db = require('./models/conexion');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
 async function crearUsuarioPrueba() {
     try {

@@ -1,8 +1,8 @@
-create database Novaventa;
+-- create database Novaventa;
 
-use Novaventa;
+-- use Novaventa;
 
-create table Usuarios (
+create table if not exists Usuarios (
 id int primary key auto_increment,
 nombres varchar(100),
 apellidos varchar(255),
@@ -12,7 +12,7 @@ venta_final int,
 estado tinyint default 1
 );
 
-create table Productos (
+create table if not exists Productos (
 id int primary key auto_increment,
 nombre_producto varchar(255),
 codigo_producto varchar(6),
@@ -22,7 +22,7 @@ estado tinyint default 1
 );
 
 -- Tabla de Ventas (venta por usuario)
-create table Ventas (
+create table if not exists Ventas (
 id int primary key auto_increment,
 usuario_id int,
 fecha datetime default current_timestamp,
@@ -32,7 +32,7 @@ foreign key (usuario_id) references Usuarios(id)
 );
 
 -- Tabla intermedia para relacion N:M entre Ventas y Productos
-create table VentasProductos (
+create table if not exists VentasProductos (
 id int primary key auto_increment,
 venta_id int,
 producto_id int,
