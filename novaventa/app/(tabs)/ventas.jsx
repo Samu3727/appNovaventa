@@ -10,6 +10,8 @@ export default function VentasTab() {
   const [usuarios, setUsuarios] = useState([]);
   const [productos, setProductos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [detalleModalVisible, setDetalleModalVisible] = useState(false);
+  const [ventaDetalle, setVentaDetalle] = useState(null);
   const [selectedUsuario, setSelectedUsuario] = useState(null);
   const [carrito, setCarrito] = useState([]);
   const { token } = useContext(AuthContext);
@@ -106,6 +108,8 @@ export default function VentasTab() {
       return Alert.alert('Error', 'Seleccione un usuario y agregue productos');
     }
 
+    const total = calcularTotal();
+
     try {
       const resp = await fetch(`${API_BASE}/ventas`, {
         method: 'POST',
@@ -115,7 +119,8 @@ export default function VentasTab() {
         },
         body: JSON.stringify({
           usuario_id: selectedUsuario,
-          productos: carrito
+          productos: carrito,
+          total: total
         })
       });
 
@@ -129,15 +134,28 @@ export default function VentasTab() {
     }
   };
 
+  const verDetalleVenta = async (ventaId) => {
+    try {
+      const resp = await fetch(`${API_BASE}/ventas/${ventaId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await resp.json();
+      setVentaDetalle(data);
+      setDetalleModalVisible(true);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo cargar el detalle de la venta');
+    }
+  };
+
   const renderVenta = ({ item }) => (
-    <View style={styles.ventaItem}>
+    <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.id)}>
       <View style={styles.ventaHeader}>
         <Text style={styles.ventaId}>Venta #{item.id}</Text>
         <Text style={styles.ventaTotal}>${item.total}</Text>
       </View>
       <Text style={styles.ventaFecha}>{new Date(item.fecha).toLocaleDateString()}</Text>
       <Text style={styles.ventaUsuario}>Usuario ID: {item.usuario_id}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderProductoCarrito = ({ item }) => (
@@ -253,6 +271,72 @@ export default function VentasTab() {
                   <Text style={styles.saveButtonText}>Guardar Venta</Text>
                 </TouchableOpacity>
               </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Detalle de Venta */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={detalleModalVisible}
+        onRequestClose={() => setDetalleModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              {ventaDetalle && (
+                <>
+                  <Text style={styles.modalTitle}>Detalle de Venta #{ventaDetalle.venta?.id}</Text>
+                  
+                  <View style={styles.detalleCard}>
+                    <Text style={styles.detalleLabel}>Fecha:</Text>
+                    <Text style={styles.detalleValue}>
+                      {new Date(ventaDetalle.venta?.fecha).toLocaleString()}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detalleCard}>
+                    <Text style={styles.detalleLabel}>Usuario ID:</Text>
+                    <Text style={styles.detalleValue}>{ventaDetalle.venta?.usuario_id}</Text>
+                  </View>
+
+                  <View style={styles.detalleCard}>
+                    <Text style={styles.detalleLabel}>Total:</Text>
+                    <Text style={[styles.detalleValue, styles.totalDetalle]}>
+                      ${ventaDetalle.venta?.total}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.label}>Productos ({ventaDetalle.productos?.length || 0})</Text>
+                  
+                  {ventaDetalle.productos?.map((producto, index) => (
+                    <View key={index} style={styles.productoDetalleItem}>
+                      <View style={styles.productoDetalleInfo}>
+                        <Text style={styles.productoDetalleNombre}>{producto.nombre_producto}</Text>
+                        <Text style={styles.productoDetalleCodigo}>Código: {producto.codigo_producto}</Text>
+                      </View>
+                      <View style={styles.productoDetalleRight}>
+                        <Text style={styles.productoDetalleCantidad}>x{producto.cantidad}</Text>
+                        <Text style={styles.productoDetallePrecio}>
+                          ${producto.precio_unitario}
+                        </Text>
+                        <Text style={styles.productoDetalleSubtotal}>
+                          ${(producto.cantidad * producto.precio_unitario).toFixed(2)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton, { marginTop: 20 }]} 
+                onPress={() => setDetalleModalVisible(false)}
+              >
+                <Text style={styles.saveButtonText}>Cerrar</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -483,5 +567,71 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16
+  },
+  detalleCard: {
+    backgroundColor: '#F9FAFB',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  detalleLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280'
+  },
+  detalleValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827'
+  },
+  totalDetalle: {
+    fontSize: 20,
+    color: '#10B981'
+  },
+  productoDetalleItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#8B5CF6'
+  },
+  productoDetalleInfo: {
+    flex: 1
+  },
+  productoDetalleNombre: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4
+  },
+  productoDetalleCodigo: {
+    fontSize: 13,
+    color: '#6B7280'
+  },
+  productoDetalleRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center'
+  },
+  productoDetalleCantidad: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8B5CF6',
+    marginBottom: 2
+  },
+  productoDetallePrecio: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 2
+  },
+  productoDetalleSubtotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827'
   }
 });
