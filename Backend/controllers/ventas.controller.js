@@ -67,8 +67,21 @@ const getVentaPorId = async (req, res) => {
     }
 };
 
+// Eliminar venta (soft delete)
+const eliminarVenta = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query('UPDATE Ventas SET estado = 0 WHERE id = ?', [id]);
+        res.json({ message: 'Venta eliminada exitosamente' });
+    } catch (error) {
+        console.error('Error al eliminar venta: ', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     crearVenta,
     listarVentas,
-    getVentaPorId
+    getVentaPorId,
+    eliminarVenta
 };

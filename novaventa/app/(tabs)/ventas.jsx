@@ -147,6 +147,33 @@ export default function VentasTab() {
     }
   };
 
+  const eliminarVenta = (ventaId) => {
+    Alert.alert(
+      'Confirmar',
+      '¿Está seguro de eliminar esta venta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await fetch(`${API_BASE}/ventas/${ventaId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              Alert.alert('Éxito', 'Venta eliminada');
+              setDetalleModalVisible(false);
+              fetchVentas();
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar la venta');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderVenta = ({ item }) => (
     <TouchableOpacity style={styles.ventaItem} onPress={() => verDetalleVenta(item.id)}>
       <View style={styles.ventaHeader}>
@@ -331,12 +358,20 @@ export default function VentasTab() {
                 </>
               )}
 
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton, { marginTop: 20 }]} 
-                onPress={() => setDetalleModalVisible(false)}
-              >
-                <Text style={styles.saveButtonText}>Cerrar</Text>
-              </TouchableOpacity>
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.deleteButton]} 
+                  onPress={() => eliminarVenta(ventaDetalle?.venta?.id)}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️ Eliminar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.saveButton]} 
+                  onPress={() => setDetalleModalVisible(false)}
+                >
+                  <Text style={styles.saveButtonText}>Cerrar</Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -557,6 +592,14 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#6B7280',
+    fontWeight: '600',
+    fontSize: 16
+  },
+  deleteButton: {
+    backgroundColor: '#EF4444'
+  },
+  deleteButtonText: {
+    color: '#fff',
     fontWeight: '600',
     fontSize: 16
   },
