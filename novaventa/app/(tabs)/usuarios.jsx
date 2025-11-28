@@ -49,10 +49,6 @@ export default function UsuariosTab() {
             return Alert.alert('Error', 'Nombres y apellidos son requeridos');
         }
 
-        if (!editMode && (!currentUsuario.correo || !currentUsuario.contrasena)) {
-            return Alert.alert('Error', 'Correo y contraseña son requeridos para crear un usuario');
-        }
-
         try {
             const url = editMode
                 ? `${API_BASE}/usuarios/${currentUsuario.id}`
@@ -60,15 +56,11 @@ export default function UsuariosTab() {
 
             const method = editMode ? 'PUT' : 'POST';
 
-            const body = editMode
-                ? { nombres: currentUsuario.nombres, apellidos: currentUsuario.apellidos, telefono: currentUsuario.telefono }
-                : { 
-                    nombres: currentUsuario.nombres, 
-                    apellidos: currentUsuario.apellidos, 
-                    correo: currentUsuario.correo,
-                    telefono: currentUsuario.telefono,
-                    contrasena: currentUsuario.contrasena
-                };
+            const body = { 
+                nombres: currentUsuario.nombres, 
+                apellidos: currentUsuario.apellidos, 
+                telefono: currentUsuario.telefono
+            };
 
             const resp = await fetch(url, {
                 method,
@@ -196,31 +188,6 @@ export default function UsuariosTab() {
                                 placeholder="Apellidos"
                                 placeholderTextColor="#9CA3AF"
                             />
-
-                            {!editMode && (
-                                <>
-                                    <Text style={styles.label}>Correo *</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={currentUsuario.correo}
-                                        onChangeText={(t) => setCurrentUsuario({ ...currentUsuario, correo: t })}
-                                        placeholder="correo@ejemplo.com"
-                                        placeholderTextColor="#9CA3AF"
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                    />
-
-                                    <Text style={styles.label}>Contraseña *</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={currentUsuario.contrasena}
-                                        onChangeText={(t) => setCurrentUsuario({ ...currentUsuario, contrasena: t })}
-                                        placeholder="Contraseña"
-                                        placeholderTextColor="#9CA3AF"
-                                        secureTextEntry
-                                    />
-                                </>
-                            )}
 
                             <Text style={styles.label}>Teléfono</Text>
                             <TextInput

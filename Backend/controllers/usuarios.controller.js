@@ -65,27 +65,35 @@ const getUsuarioPorId = async (req, res) => {
 
 const crearUsuario = async (req, res) => {
     try {
-        const {nombres, apellidos, correo, telefono, contrasena} = req.body;
+        const {nombres, apellidos, telefono} = req.body;
 
         // Validar campos requeridos
-        if (!nombres || !apellidos || !correo || !contrasena) {
-            return res.status(400).json({error: 'Nombres, apellidos, correo y contraseña son requeridos'});
+        if (!nombres || !apellidos) {
+            return res.status(400).json({error: 'Nombres y apellidos son requeridos'});
         }
 
+        // Generar correo automático: primera letra del nombre + apellido + numero aleatorio
+        const correoBase = `${nombres.charAt(0).toLowerCase()}${apellidos.toLowerCase().replace(/\s+/g, '')}`;
+        const numeroAleatorio = Math.floor(Math.random() * 10000);
+        const correoGenerado = `${correoBase}${numeroAleatorio}@novaventa.com`;
+
+        // Generar contraseña automática: 8 caracteres aleatorios
+        const contrasenaGenerada = Math.random().toString(36).slice(-8) + Math.floor(Math.random() * 100);
+
         // Encriptar contraseña
-        const hashedPassword = await bcrypt.hash(contrasena, 10);
+        const hashedPassword = await bcrypt.hash(contrasenaGenerada, 10);
 
         const sql = 'INSERT INTO usuarios (nombres, apellidos, correo, telefono, contrasena, estado) VALUES (?, ?, ?, ?, ?, ?)';
-        const values = [nombres, apellidos, correo, telefono || null, hashedPassword, 1];
+        const values = [nombres, apellidos, correoGenerado, telefono || null, hashedPassword, 1];
 
         const [result] = await db.query(sql, values);
 
-        console.log('Usuario creado con exito', {id: result.insertId, nombres, apellidos, correo, telefono});
+        console.log('Usuario creado con exito', {id: result.insertId, nombres, apellidos, correo: correoGenerado, telefono});
 
-        res.status(201).json({id: result.insertId, nombres, apellidos, correo, telefono});
+        res.status(201).json({id: result.insertId, nombres, apellidos, correo: correoGenerado, telefono});
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
-            res.status(400).json({error: 'El correo ya está registrado'});
+            res.status(400).json({error: 'Error al generar correo único, intente nuevamente'});
         } else {
             res.status(500).json({error: error.message});
         }
