@@ -9,7 +9,7 @@ const loginUsuario = async (req, res) => {
     const { correo, contrasena } = req.body;
 
     try {
-        const [rows] = await db.query('SELECT * FROM Usuarios WHERE correo = ?', [correo]);
+        const [rows] = await db.query('SELECT * FROM Usuarios WHERE LOWER(correo) = LOWER(?)', [correo]);
 
         if (!rows || rows.length === 0) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
