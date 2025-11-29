@@ -29,7 +29,7 @@ const loginUsuario = async (req, res) => {
             nombre: `${usuario.nombres} ${usuario.apellidos}`
         };
 
-        const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '30d' });
 
         res.json({
             token,
