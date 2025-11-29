@@ -8,6 +8,8 @@ nombres varchar(100),
 apellidos varchar(255),
 correo varchar(255),
 contrasena varchar(1000),
+imagen_perfil varchar(255),
+telefono varchar(20),
 venta_final int, 
 estado tinyint default 1
 );

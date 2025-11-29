@@ -67,26 +67,32 @@ export default function Perfil() {
         type
       });
 
+      console.log('Subiendo imagen a:', `${API_BASE_URL}/upload/profile-image`);
+
       const response = await fetch(`${API_BASE_URL}/upload/profile-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
+          // NO incluir Content-Type, fetch lo configurará automáticamente
         },
         body: formData
       });
 
+      console.log('Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('Imagen subida exitosamente:', data.imageUrl);
         setProfileImage(data.imageUrl);
-        Alert.alert('Éxito', 'Imagen actualizada correctamente');
+        alert.success('Éxito', 'Imagen actualizada correctamente');
       } else {
         const error = await response.json();
-        Alert.alert('Error', error.message || 'No se pudo subir la imagen');
+        console.error('Error del servidor:', error);
+        alert.error('Error', error.message || 'No se pudo subir la imagen');
       }
     } catch (error) {
       console.error('Error al subir imagen:', error);
-      Alert.alert('Error', 'No se pudo subir la imagen');
+      alert.error('Error', 'No se pudo subir la imagen');
     } finally {
       setLoading(false);
     }
