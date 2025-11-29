@@ -98,16 +98,20 @@ export default function VentasTab() {
 
   const fetchProductos = useCallback(async () => {
     try {
-      const resp = await fetch(`${API_BASE}/productos`, { 
+      console.log('Cargando productos desde:', `${API_BASE}/productos?limit=1000`);
+      const resp = await fetch(`${API_BASE}/productos?limit=1000`, { 
         headers: { Authorization: `Bearer ${token}` } 
       });
       const data = await resp.json();
-      setProductos(data.items || data || []);
+      console.log('Productos recibidos:', data);
+      const productosArray = data.items || data || [];
+      console.log('Productos array length:', productosArray.length);
+      setProductos(productosArray);
     } catch (error) {
-      console.error(error);
+      console.error('Error al cargar productos:', error);
       setProductos([]);
     }
-  }, [token]);
+  }, [token, API_BASE]);
 
   useFocusEffect(
     useCallback(() => {
@@ -387,6 +391,14 @@ export default function VentasTab() {
               {usuariosVentas.length > 0 ? (
                 <>
                   <Text style={styles.label}>Usuarios en este pedido ({usuariosVentas.length})</Text>
+                  
+                  {/* DEBUG GLOBAL */}
+                  <View style={styles.debugGlobal}>
+                    <Text style={styles.debugGlobalText}>
+                      🔍 PRODUCTOS CARGADOS: {productos.length}
+                    </Text>
+                  </View>
+
                   {usuariosVentas.map((usuario) => (
                     <View key={usuario.usuario_id} style={styles.usuarioCard}>
                       <View style={styles.usuarioHeader}>
@@ -435,7 +447,22 @@ export default function VentasTab() {
                       )}
 
                       {/* Agregar productos al usuario */}
-                      <Text style={styles.labelSmall}>Agregar producto:</Text>
+                      <Text style={styles.labelSmall}>
+                        Agregar producto {productos.length > 0 && `(${productos.length} disponibles)`}
+                      </Text>
+                      
+                      {/* DEBUG: Mostrar info */}
+                      <View style={styles.debugContainer}>
+                        <Text style={styles.debugText}>
+                          Total productos: {productos.length}
+                        </Text>
+                        <Text style={styles.debugText}>
+                          Filtrados: {productos.filter(p => {
+                            if (!searchProducto) return true;
+                            return p.nombre_producto.toLowerCase().includes(searchProducto.toLowerCase());
+                          }).length}
+                        </Text>
+                      </View>
                       
                       {/* Buscador de productos */}
                       <View style={styles.searchContainer}>
@@ -447,22 +474,48 @@ export default function VentasTab() {
                           onChangeText={setSearchProducto}
                           placeholderTextColor="#9CA3AF"
                         />
+                        {searchProducto !== '' && (
+                          <TouchableOpacity onPress={() => setSearchProducto('')}>
+                            <Text style={styles.clearSearch}>✕</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productosHorizontal}>
-                        {(productos || [])
-                          .filter(p => p.nombre_producto.toLowerCase().includes(searchProducto.toLowerCase()))
-                          .map((p) => (
-                          <TouchableOpacity 
-                            key={p.id}
-                            style={styles.productoChip}
-                            onPress={() => agregarProductoAUsuario(usuario.usuario_id, p)}
-                          >
-                            <Text style={styles.productoChipText}>{p.nombre_producto}</Text>
-                            <Text style={styles.productoChipPrecio}>${p.precio_producto}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+                      {/* Lista de productos */}
+                      {productos.length === 0 ? (
+                        <Text style={styles.noProductos}>⚠️ No hay productos disponibles. Agregue productos primero.</Text>
+                      ) : (
+                        <View style={styles.productosWrapper}>
+                          <Text style={styles.productosHint}>
+                            👇 {productos.filter(p => !searchProducto || p.nombre_producto.toLowerCase().includes(searchProducto.toLowerCase())).length} productos disponibles
+                          </Text>
+                          
+                          {/* Productos en VERTICAL para web */}
+                          <View style={styles.productosVertical}>
+                            {productos
+                              .filter(p => {
+                                if (!searchProducto) return true;
+                                return p.nombre_producto.toLowerCase().includes(searchProducto.toLowerCase());
+                              })
+                              .map((p) => (
+                              <TouchableOpacity 
+                                key={p.id}
+                                style={styles.productoChipVertical}
+                                onPress={() => {
+                                  console.log('Agregando producto:', p);
+                                  agregarProductoAUsuario(usuario.usuario_id, p);
+                                }}
+                              >
+                                <View style={styles.productoChipContent}>
+                                  <Text style={styles.productoChipText}>{p.nombre_producto}</Text>
+                                  <Text style={styles.productoChipPrecio}>${p.precio_producto}</Text>
+                                </View>
+                                <Text style={styles.productoChipAdd}>+</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      )}
 
                       {/* Total del usuario */}
                       <View style={styles.totalUsuario}>
@@ -995,33 +1048,106 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: 8
   },
+  clearSearch: {
+    fontSize: 18,
+    color: '#6B7280',
+    marginLeft: 8,
+    fontWeight: '700'
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: '#111827'
   },
+  noProductos: {
+    textAlign: 'center',
+    color: '#EF4444',
+    fontSize: 14,
+    padding: 12,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    marginBottom: 10,
+    fontWeight: '600'
+  },
+  productosWrapper: {
+    marginBottom: 10
+  },
+  productosHint: {
+    fontSize: 13,
+    color: '#8B5CF6',
+    marginBottom: 8,
+    fontWeight: '600'
+  },
+  debugContainer: {
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 8
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '600'
+  },
+  productosVertical: {
+    gap: 8
+  },
+  productoChipVertical: {
+    backgroundColor: 'white',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#8B5CF6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  productoChipContent: {
+    flex: 1
+  },
+  productoChipAdd: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    marginLeft: 12
+  },
   productosHorizontal: {
     marginBottom: 10
   },
+  productosContent: {
+    paddingRight: 16
+  },
   productoChip: {
     backgroundColor: 'white',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginRight: 10,
+    borderWidth: 2,
     borderColor: '#8B5CF6',
-    alignItems: 'center'
+    alignItems: 'center',
+    minWidth: 120,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
   },
   productoChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8B5CF6'
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    marginBottom: 4
   },
   productoChipPrecio: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#10B981'
   },
   totalUsuario: {
     flexDirection: 'row',

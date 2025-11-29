@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "novaventa",
+    "name": "NovaGo",
     "slug": "novaventa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "novaventa",
+    "scheme": "novaggo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -19,11 +19,22 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.samu37.novaventa"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro",
+      "name": "NovaGo",
+      "shortName": "NovaGo",
+      "description": "Sistema de ventas multi-usuario",
+      "lang": "es",
+      "backgroundColor": "#ffffff",
+      "themeColor": "#8B5CF6",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/"
     },
     "plugins": [
       "expo-router",
@@ -43,6 +54,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c335ec8a-1e79-4b2f-802a-89c13856d16e"
+      }
     }
   }
 }

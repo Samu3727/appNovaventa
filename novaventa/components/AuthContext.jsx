@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '../utils/storage';
 import { Alert } from 'react-native';
 import { API_BASE_URL } from '../config/api';
 
@@ -22,12 +22,13 @@ export const AuthProvider = ({ children }) => {
 
   const loadStoredAuth = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('token');
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      }
+      // No cargar token ni usuario guardados - siempre pedir login
+      // const storedToken = await AsyncStorage.getItem('token');
+      // const storedUser = await AsyncStorage.getItem('user');
+      // if (storedToken && storedUser) {
+      //   setToken(storedToken);
+      //   setUser(JSON.parse(storedUser));
+      // }
     } catch (error) {
       console.error('Error loading auth:', error);
     } finally {
