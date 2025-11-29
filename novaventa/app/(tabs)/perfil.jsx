@@ -36,7 +36,8 @@ export default function Perfil() {
       if (response.ok) {
         const data = await response.json();
         if (data.imageUrl) {
-          setProfileImage(`${API_BASE_URL}${data.imageUrl}`);
+          // Cloudinary devuelve URLs completas, no necesitamos agregar API_BASE_URL
+          setProfileImage(data.imageUrl);
         }
       }
     } catch (error) {
@@ -77,7 +78,7 @@ export default function Perfil() {
 
       if (response.ok) {
         const data = await response.json();
-        setProfileImage(`${API_BASE_URL}${data.imageUrl}`);
+        setProfileImage(data.imageUrl);
         Alert.alert('Éxito', 'Imagen actualizada correctamente');
       } else {
         const error = await response.json();
