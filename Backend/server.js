@@ -48,6 +48,7 @@ const ventasRoutes = require('./routes/ventas');
 const utilidadesRoutes = require('./routes/utilidades');
 const uploadRoutes = require('./routes/upload');
 const perfilRoutes = require('./routes/perfil');
+const migrationRoutes = require('./routes/migration');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
@@ -56,6 +57,7 @@ app.use('/api/ventas', ventasRoutes);
 app.use('/api/utilidades', utilidadesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/perfil', perfilRoutes);
+app.use('/api/migration', migrationRoutes);
 
 //Carpeta de imagenes.
 
